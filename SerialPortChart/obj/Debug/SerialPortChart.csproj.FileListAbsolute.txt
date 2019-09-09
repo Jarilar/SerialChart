@@ -1,0 +1,15 @@
+D:\DDscatCalculation\BenXH_1\BenXH\BXHSerialPort\obj\Debug\SerialPortChart.csprojAssemblyReference.cache
+D:\DDscatCalculation\BenXH_1\BenXH\BXHSerialPort\obj\Debug\SerialPortChart.frmSerialPort.resources
+D:\DDscatCalculation\BenXH_1\BenXH\BXHSerialPort\obj\Debug\SerialPortChart.Properties.Resources.resources
+D:\DDscatCalculation\BenXH_1\BenXH\BXHSerialPort\obj\Debug\SerialPortChart.csproj.GenerateResource.cache
+D:\DDscatCalculation\BenXH_1\BenXH\BXHSerialPort\obj\Debug\SerialPortChart.csproj.CoreCompileInputs.cache
+D:\DDscatCalculation\BenXH_1\BenXH\BXHSerialPort\bin\Debug\SerialPortChart.xml
+D:\DDscatCalculation\BenXH_1\BenXH\BXHSerialPort\bin\Debug\SerialPortChart.exe
+D:\DDscatCalculation\BenXH_1\BenXH\BXHSerialPort\bin\Debug\SerialPortChart.pdb
+D:\DDscatCalculation\BenXH_1\BenXH\BXHSerialPort\bin\Debug\HslCommunication.dll
+D:\DDscatCalculation\BenXH_1\BenXH\BXHSerialPort\bin\Debug\Newtonsoft.Json.dll
+D:\DDscatCalculation\BenXH_1\BenXH\BXHSerialPort\bin\Debug\HslCommunication.xml
+D:\DDscatCalculation\BenXH_1\BenXH\BXHSerialPort\bin\Debug\Newtonsoft.Json.xml
+D:\DDscatCalculation\BenXH_1\BenXH\BXHSerialPort\obj\Debug\SerialPortChart.csproj.CopyComplete
+D:\DDscatCalculation\BenXH_1\BenXH\BXHSerialPort\obj\Debug\SerialPortChart.exe
+D:\DDscatCalculation\BenXH_1\BenXH\BXHSerialPort\obj\Debug\SerialPortChart.pdb
