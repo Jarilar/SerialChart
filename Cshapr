@@ -1,0 +1,739 @@
+using CommunityToolkit.Mvvm.ComponentModel;
+using CommunityToolkit.Mvvm.Input;
+using System.Collections.ObjectModel;
+using System.Diagnostics;
+using Windows.Storage.Pickers;
+using Yongmean.TakingTranFunc;
+using System.Text;
+using Microsoft.Data.Sqlite;
+using OriginalCircuit.AltiumSharp;
+
+
+
+namespace Yongmean.ViewModels;
+
+public partial class MainViewModel : ObservableRecipient
+{
+    private int mainnum, linenum;
+    private bool starty = false, Isselce = false;
+    private string tempwell = "", filepath = "", SchPath = "", mdbfile = "";
+    private int StringStep = 0, typell, templl;
+    public int maxlenght = 10;
+    // 定义一个枚举类型
+    enum TransType
+    {
+        PROJID,
+        DEVLAN_GROUP,
+        DEVLAN_MEA,
+        DEVLAN_CHAN,
+        DEVLAN_DO,
+        DEVLAN_OUT,
+        DEVLAN_OCON,
+        DEVLAN_YXVI,
+        DEVLAN_PRO,
+        DEVLAN_YXDI,
+        DEVLAN_YXAL,
+        DEVLAN_YK,
+        DEVLAN_YT,
+        DEVLAN_SFC,
+        DEVLAN_DZ,
+        DEVLAN_YXA,
+        DEVLAN_PLUSE,
+        DEVLAN_OPEREVENT,
+    }
+
+
+    public ObservableCollection<TranStrty> Lineks
+    {
+        get; set;
+    }
+
+    public ObservableCollection<TranStrty> Ternels
+    {
+        get; set;
+    }
+
+    public int TypeNow = 1;
+
+    public MainViewModel()
+    {
+        Lineks = new ObservableCollection<TranStrty>();
+        Ternels = new ObservableCollection<TranStrty>();
+        LoadFileCommand = new RelayCommand(Openfile);
+        SaveNetCommand = new RelayCommand(SaveNetFile);
+        SaveMdbCommand = new RelayCommand(SaveMdbFile);
+        SaveCurList = new RelayCommand(SaveLinekList);
+        SaveOtherList = new RelayCommand(SaveLinekToOtherList);
+        LoadSchFile = new RelayCommand(OpenSch);
+        LenghtSettings = new RelayCommand(Lenghtset);
+        AboutToo = new RelayCommand(AboutMe);
+        AllGrid = new RelayCommand(GridClear);
+        JustUndo = new RelayCommand(FindUndo);
+        LoadMdbFile = new RelayCommand(LoadMdb);
+        ClearTransl = new RelayCommand(CleanItem);
+        MatchCURMDB = new RelayCommand(MatchNow);
+    }
+    public RelayCommand LoadFileCommand
+    {
+        get;
+    }
+
+    public RelayCommand SaveNetCommand
+    {
+        get;
+    }
+
+    public RelayCommand SaveMdbCommand
+    {
+        get;
+    }
+
+    public RelayCommand SaveCurList
+    {
+        get;
+    }
+
+    public RelayCommand SaveOtherList
+    {
+        get;
+    }
+
+    public RelayCommand LoadSchFile
+    {
+        get;
+    }
+
+    public RelayCommand LoadMdbFile
+    {
+        get;
+    }
+
+    public RelayCommand LenghtSettings
+    {
+        get;
+    }
+
+    public RelayCommand AboutToo
+    {
+        get;
+    }
+
+    public RelayCommand AllGrid
+    {
+        get;
+    }
+
+    public RelayCommand JustUndo
+    {
+        get;
+    }
+
+    public RelayCommand ClearTransl
+    {
+        get;
+    }
+
+    public RelayCommand MatchCURMDB
+    {
+        get;
+    }
+
+
+    private void GetValueformNET(string FileName)
+    {
+        string line;
+        starty = false;
+        mainnum = 1;
+        try
+        {
+            Encoding.RegisterProvider(CodePagesEncodingProvider.Instance);
+            var sr = new StreamReader(FileName, Encoding.GetEncoding("gb2312"));
+            //Read the first line of text
+            if (sr != null)
+            {
+                line = sr.ReadLine();
+                linenum = 0;
+                GetKeywords(line);
+                while (line != null)
+                {
+                    ++linenum;
+                    line = sr.ReadLine();
+                    if (line != null)
+                    {
+                        GetKeywords(line);
+                    }
+                }
+                sr.Close();
+            }
+
+        }
+        catch (Exception)
+        {
+            // Console.WriteLine("Exception: " + e.Message);
+        }
+        finally
+        {
+            //Console.WriteLine("Executing finally block.");
+        }
+
+        //return FirstTran;
+    }
+
+    private void GetKeywords(string geit)
+    {
+        switch (StringStep)
+        {
+            case 0:
+                if (geit == "[")
+                {
+                    templl = 0;
+                    StringStep = 1;
+                }
+                // Trace.WriteLine("start----------------" + templl);
+                break;
+            case 1:
+                if (geit == "]")
+                {
+                    starty = false;
+                    tempwell = "";
+                    StringStep = 0;
+                }
+                else if (geit == "[")
+                {
+                }
+                else
+                {
+                    
+                    if (geit == "YK_RELAY" ||
+                        geit == "YK_RELAY_NEW" ||
+                        geit == "REMOTE_CONTROL_SK" ||
+                        geit == "YK_RELAY_400" ||
+                        geit == "YK_RELAY_M" ||
+                        geit == "YK_RELAY_400_NEW")
+                    {
+                        ++StringStep;
+                        typell = (int)TransType.DEVLAN_YK;//遥控
+                    }
+                    else if (geit == "YT_INPUT")
+                    {
+                        ++StringStep;
+                        typell = (int)TransType.DEVLAN_YT;//遥调
+                    }
+                    else if (geit == "DZ" ||
+                             geit == "CON_LOGIC")
+                    {
+                        ++StringStep;
+                        Trace.WriteLine("DZ or CON_LOGIC's num = " + StringStep);
+                        typell = (int)TransType.DEVLAN_DZ;//定值
+                    }
+                    else if (geit == "XB_LOGIC")
+                    {
+                        ++StringStep;
+                        typell = (int)TransType.DEVLAN_SFC;//压板
+                    }
+                    else if (geit == "CHANNEL" ||
+                             geit == "ANGLE_ADJUST")
+                    {
+                        ++StringStep;
+                        typell = (int)TransType.DEVLAN_CHAN;//通道系数
+                    }
+                    else if (geit == "MAM_VEC" ||
+                             geit == "MAM_VAL")
+                    {
+                        ++StringStep;
+                        typell = (int)TransType.DEVLAN_MEA;//遥测
+                    }
+                    else if (geit == "PAM_VEC" ||
+                             geit == "PAM_VAL" ||
+                             geit == "HARMO_VAL")
+                    {
+                        ++StringStep;
+                        typell = (int)TransType.DEVLAN_PRO;//保护测量值
+                    }
+                    else if (geit == "MPULSE_VAL")
+                    {
+                        ++StringStep;
+                        typell = (int)TransType.DEVLAN_PLUSE;//电度
+                    }
+                    else if (geit == "TRIP" ||
+                             geit == "RELAY" ||
+                             geit == "L2_RELAY")
+                    {
+                        ++StringStep;
+                        typell = (int)TransType.DEVLAN_DO;//出口
+                    }
+                    else if (geit == "IN_LOGIC_Q")
+                    {
+                        ++StringStep;
+                        typell = (int)TransType.DEVLAN_YXVI;//虚遥信
+                    }
+                    else if (geit == "FUN_COS_ALARM" ||//告警总
+                             geit == "FUN_COS_ACT" ||//动作总
+                             geit == "FUN_ALARM_NOREC")
+                    {
+                        ++StringStep;
+                        typell = (int)TransType.DEVLAN_YXAL;//遥信告警
+                    }
+                    else if (geit == "DI_NOREC_NEW")
+                    {
+                        ++StringStep;
+                        typell = (int)TransType.DEVLAN_YXDI;//遥信DI录波
+                    }
+                    else if (geit == "COMP_OUTPUT")
+                    {
+                        ++StringStep;
+                        typell = (int)TransType.DEVLAN_OCON;//
+                    }
+                    else if (geit == "FUN_SOE_NOREC" ||
+                        geit == "NEP9801_CT_FUN_SOE_NOREC" ||
+                        geit == "NEP9801_CT_FUN_SOE_REC" ||
+                        geit == "NEP9801_CT_FUN_SOE_QD" ||
+                        geit == "NEP9801_CT_FUN_SOE_REC_ADD" ||
+                        geit == "NEP9801_CT_FUN_SOE_REC_400" ||
+                        geit == "NEP9801_CT_FUN_SOE_QD_ADD"
+                        )
+                    {
+                        ++StringStep;
+                        typell = (int)TransType.DEVLAN_YXA;//遥信
+                    }
+                    if (geit == "DeviceType")
+                    {
+                        ++StringStep;
+                        Trace.WriteLine("DeviceType's num = " + StringStep);
+                        typell = (int)TransType.PROJID;
+                    }
+                    else if (geit == "GRP_NAME")
+                    {
+                        ++StringStep;
+                        Trace.WriteLine("GRP_NAME's num = " + StringStep);
+                        typell = (int)TransType.DEVLAN_GROUP;
+                    }
+                    else
+                    {
+                        //typell = 0x55AA;
+                        //Trace.WriteLine("start------lese----------" + typell);
+                    }
+
+                }
+                break;
+            case 2:
+                if (geit == "Comment")
+                {
+                    ++StringStep;
+                }
+                else
+                {
+                    ++templl;
+                    if (templl > 30) { StringStep = 0; }
+                }
+                break;
+            case 3:
+                if (typell != 0x55AA)
+                {
+                    Stringformatt(geit);
+                }
+                StringStep = 0;
+                break;
+        }
+    }
+
+    private void Stringformatt(string origin)
+    {
+        var wellform = new TranStrty();
+        if (!string.IsNullOrEmpty(origin))
+        {
+            var parts = origin.Split(';');
+            if (parts.Length > 1)
+            {
+                wellform.TitleOrigin = parts[0];
+                wellform.Transtrings = new ObservableCollection<string>(parts.Skip(1));
+            }
+            else
+            {
+                wellform.TitleOrigin = origin;
+                wellform.Transtrings = new ObservableCollection<string> { "", "" };
+            }
+            wellform.Linenumber = linenum;
+            wellform.Nor = mainnum;
+            wellform.seial = tempwell;
+
+            if (!string.IsNullOrEmpty(wellform.TitleOrigin))
+            {
+                //Trace.WriteLine("seial = " + wellform.seial + ";Title = " + wellform.TitleOrigin);
+                Lineks.Add(wellform);
+                Ternels.Add(wellform);
+                ++mainnum;
+            }
+        }
+
+    }
+
+
+    private void GetSchData()
+    {
+        try
+        {
+            using var reader = new SchLibReader();
+            var schLib = reader.Read(SchPath);
+
+            foreach (var component in schLib.Items)
+            {
+                Trace.WriteLine($"Name: {((IComponent)component).Name}");
+                Trace.WriteLine($"Comment: {component.Comment}");
+            }
+        }
+        catch (ArgumentOutOfRangeException ex)
+        {
+            Trace.WriteLine($"Error: {ex.Message}");
+        }
+        catch (FileNotFoundException ex)
+        {
+            Trace.WriteLine($"File not found: {ex.Message}");
+        }
+        catch (Exception ex)
+        {
+            Trace.WriteLine($"An error occurred: {ex.Message}");
+        }
+    }
+
+    private async void Openfile()
+    {
+        // Create a file picker
+        var openPicker = new Windows.Storage.Pickers.FileOpenPicker();
+
+        // Retrieve the window handle (HWND) of the current WinUI 3 window.
+        var hWnd = WinRT.Interop.WindowNative.GetWindowHandle(App.MainWindow);
+
+        // Initialize the file picker with the window handle (HWND).
+        WinRT.Interop.InitializeWithWindow.Initialize(openPicker, hWnd);
+
+        // Set options for your file picker
+        openPicker.ViewMode = PickerViewMode.Thumbnail;
+        openPicker.FileTypeFilter.Add(".NET");
+
+        // Open the picker for the user to pick a file
+        var file = await openPicker.PickSingleFileAsync();
+        if (file != null)
+        {
+            filepath = file.Path;
+            Lineks.Clear();
+            Ternels.Clear();
+            GetValueformNET(file.Path);
+        }
+
+    }
+
+    private async void OpenSch()
+    {
+        // Create a file picker
+        var openPicker = new Windows.Storage.Pickers.FileOpenPicker();
+
+        // Retrieve the window handle (HWND) of the current WinUI 3 window.
+        var hWnd = WinRT.Interop.WindowNative.GetWindowHandle(App.MainWindow);
+
+        // Initialize the file picker with the window handle (HWND).
+        WinRT.Interop.InitializeWithWindow.Initialize(openPicker, hWnd);
+
+        // Set options for your file picker
+        openPicker.ViewMode = PickerViewMode.Thumbnail;
+        openPicker.FileTypeFilter.Add(".Sch");
+
+        // Open the picker for the user to pick a file
+        var file = await openPicker.PickSingleFileAsync();
+        if (file != null)
+        {
+            SchPath = file.Path;
+            Lineks.Clear();
+            Ternels.Clear();
+            //GlobalTransList.MyTrans.Clear();
+            GetSchData();
+        }
+
+    }
+
+    private async void LoadMdb()
+    {
+        // Create a file picker
+        var openPicker = new Windows.Storage.Pickers.FileOpenPicker();
+
+        // Retrieve the window handle (HWND) of the current WinUI 3 window.
+        var hWnd = WinRT.Interop.WindowNative.GetWindowHandle(App.MainWindow);
+
+        // Initialize the file picker with the window handle (HWND).
+        WinRT.Interop.InitializeWithWindow.Initialize(openPicker, hWnd);
+
+        // Set options for your file picker
+        openPicker.ViewMode = PickerViewMode.Thumbnail;
+        openPicker.FileTypeFilter.Add(".db");
+
+        // Open the picker for the user to pick a file
+        var file = await openPicker.PickSingleFileAsync();
+        if (file != null)
+        {
+            mdbfile = file.Path;
+        }
+    }
+
+
+    private void Getmdb(string dbfile, int TYPE)
+    {
+        var connectionString = $"Data Source={dbfile};";
+        int curwell = 1;
+        // 打开数据库连接
+        using var connection = new SqliteConnection(connectionString);
+        connection.Open();
+        // 查询数据
+        var query = "SELECT * FROM Trsanslates";
+        using var command = new SqliteCommand(query, connection);
+        using var reader = command.ExecuteReader();
+        switch (TYPE)
+        {
+            case 1:
+                curwell = 1;
+                break;
+            case 2:
+                curwell = 2;
+                break;
+            case 4:
+                curwell = 3;
+                break;
+            case 8:
+                curwell = 4;
+                break;
+            case 16:
+                curwell = 5;
+                break;
+            default:
+                curwell = 1;
+                break;
+        }
+        while (reader.Read())
+        {
+            var column1 = reader.GetString(1); // 假设第一列是字符串类型
+            var column2 = reader.GetString(curwell);  // 假设第二列是整数类型
+            //Trace.WriteLine($"Column1: {column1}, Column2: {column2}");
+            for (var i = 0; i < Lineks.Count(); ++i)
+            {
+                if (Lineks[i].TitleOrigin == column1)
+                {
+                    SetString(i, column2);
+                }
+            }
+        }
+    }
+
+    private void SetString(int localnum, string word)
+    {
+        Lineks[localnum].Transtrings[0] = word;
+        Ternels[localnum].Transtrings[0] = word;
+    }
+
+
+
+    private void SaveNetFile()
+    {
+        ReplaceLineInFile();
+    }
+
+    private void ReplaceLineInFile()
+    {
+        int lineNumber;// string newContent
+        if (!File.Exists(filepath))
+        {
+            throw new FileNotFoundException("The file does not exist.");
+        }
+
+        // 读取所有行到一个列表中
+        List<string> lines = new List<string>(File.ReadAllLines(filepath, Encoding.GetEncoding("gb2312")));
+
+        foreach (var line in Lineks)
+        {
+            lineNumber = line.Linenumber;
+            if (lineNumber >= 0 && lineNumber < lines.Count)
+            {
+                var templl = line.TitleOrigin + ";";
+                foreach (var line2 in line.Transtrings)
+                {
+                    templl += line2 + ";";
+                }
+                //Trace.WriteLine("line = " + templl);
+                lines[lineNumber] = templl;
+            }
+            else
+            {
+                throw new ArgumentOutOfRangeException("The line number is out of range.");
+
+            }
+
+
+        }
+        var dateString = DateTime.Now.ToString("_yyyyMMdd");
+        var tempFilePath = $"{filepath.Substring(0, filepath.IndexOf(".NET"))}{dateString}{filepath.Substring(filepath.IndexOf(".NET"))}";
+
+
+        File.WriteAllLines(tempFilePath, lines, Encoding.GetEncoding("gb2312"));
+
+        // 替换原文件
+        //File.Delete(filePath);
+        //File.Move(tempFilePath, filePath);
+    }
+
+
+    private async void SaveMdbFile()
+    {
+        var savePicker = new Windows.Storage.Pickers.FileSavePicker();
+        var hWnd = WinRT.Interop.WindowNative.GetWindowHandle(App.MainWindow);
+
+        // Initialize the file picker with the window handle (HWND).
+        WinRT.Interop.InitializeWithWindow.Initialize(savePicker, hWnd);
+
+        savePicker.SuggestedStartLocation = PickerLocationId.DocumentsLibrary;
+        savePicker.FileTypeChoices.Add("Access Database", new List<string> { ".db" });
+        savePicker.SuggestedFileName = "iPSLanguage.db";
+        // Open the picker for the user to pick a file
+        var file = await savePicker.PickSaveFileAsync();
+
+        //StorageFile file = await savePicker.PickSaveFileAsync();
+        if (file != null)
+        {
+            //Trace.WriteLine("File name = " + file.Path);
+            // 调用保存方法
+            SaveToMdb(Lineks, file.Path, TypeNow);
+            //DatabaseHelper.SaveToMdb(People, file.Path);
+        }
+    }
+
+    public static void SaveToMdb(ObservableCollection<TranStrty> TransList, string filePath, int vaiwll)
+    {
+        var targetname = "CN";
+        // 确保文件不存在
+        if (File.Exists(filePath))
+        {
+            File.Delete(filePath);
+        }
+
+        // 创建新的 SQLite 数据库文件
+        //var connectionString = $"Provider=Microsoft.Jet.OLEDB.4.0;Data Source={filePath};";
+        using var connection = new SqliteConnection($"Data Source={filePath}");
+        connection.Open();
+        //using var connection = new OleDbConnection(connectionString);
+
+        // 创建表
+        //var createTableQuery = "CREATE TABLE Trsanslates(ID INTEGER PRIMARY KEY AUTOINCREMENT, Num INTEGER, Origin TEXT, Trans TEXT)";
+        /*
+        using (var command = new OleDbCommand(createTableQuery, connection))
+        {
+            command.ExecuteNonQuery();
+        }
+
+        // 插入数据
+        foreach (var Tranmore in TransList)
+        {
+            var insertQuery = "INSERT INTO Trsanslates (Num, Origin, Trans) VALUES (@Num, @Origin, @Trans)";
+            using var command = new OleDbCommand(insertQuery, connection);
+            command.Parameters.AddWithValue("@Num", Tranmore.Nor);
+            command.Parameters.AddWithValue("@Origin", Tranmore.TitleOrigin);
+            command.Parameters.AddWithValue("@Trans", Tranmore.Transtrings[0]);
+            command.ExecuteNonQuery();
+        }*/
+        switch (vaiwll)
+        {
+            case 1:
+                targetname = "CN";
+                break;
+            case 2:
+                targetname = "BG";
+                break;
+            case 4:
+                targetname = "EN";
+                break;
+            case 8:
+                targetname = "SP";
+                break;
+            case 16:
+                targetname = "RU";
+                break;
+            default:
+                targetname = "CN";
+                break;
+        }
+
+
+        // 创建表
+        var createTableQuery = "CREATE TABLE Trsanslates (ID INTEGER PRIMARY KEY AUTOINCREMENT, Origin TEXT," + targetname + " TEXT)";
+        using (var command = new SqliteCommand(createTableQuery, connection))
+        {
+            command.ExecuteNonQuery();
+        }
+
+        // 插入数据
+        foreach (var Tranmore in TransList)
+        {
+            var insertQuery = "INSERT INTO Trsanslates ( Origin, " + targetname + ") VALUES (@Origin, @" + targetname + ")";
+            using var command = new SqliteCommand(insertQuery, connection);
+            command.Parameters.AddWithValue("@Origin", Tranmore.TitleOrigin);
+            command.Parameters.AddWithValue("@" + targetname, Tranmore.Transtrings[0]);
+            command.ExecuteNonQuery();
+        }
+    }
+
+    private void SaveLinekList()
+    {
+
+    }
+    private void SaveLinekToOtherList()
+    {
+
+    }
+
+    private void GridClear()
+    {
+        Lineks.Clear();
+        foreach (var tll in Ternels)
+        {
+            Lineks.Add(tll);
+        }
+    }
+
+    private void FindUndo()
+    {
+        Lineks.Clear();
+        foreach (var tll in Ternels)
+        {
+            if (string.IsNullOrEmpty(tll.Transtrings[0]))
+            {
+                Lineks.Add(tll);
+            }
+        }
+        //Trace.WriteLine("maxlenghr now = " + maxlenght);
+    }
+
+    private void Lenghtset()
+    {
+
+    }
+
+    private void CleanItem()
+    {
+        foreach (var tel in Lineks)
+        {
+            tel.Transtrings[0] = string.Empty;
+        }
+    }
+
+    private void MatchNow()
+    {
+        //Trace.WriteLine("filename = "+ mdbfile);
+        Getmdb(mdbfile, TypeNow);
+    }
+
+    private void AboutMe()
+    {
+
+    }
+}
+
+
+
+
+
